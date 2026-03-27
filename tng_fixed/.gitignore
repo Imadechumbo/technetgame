@@ -1,0 +1,5 @@
+.deploy/
+infra/libretranslate/data/
+infra/libretranslate/.env.local
+backend/node_modules/
+site/node_modules/

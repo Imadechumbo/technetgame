@@ -1,0 +1,485 @@
+window.TechNetGameFeeds = {
+  fallbackPool: [
+    'https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=1200&q=80',
+    'https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=1200&q=80',
+    'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80',
+    'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1200&q=80',
+    'https://images.unsplash.com/photo-1593305841991-05c297ba4575?auto=format&fit=crop&w=1200&q=80',
+    'https://images.unsplash.com/photo-1621259182978-fbf93132d53d?auto=format&fit=crop&w=1200&q=80',
+    'https://images.unsplash.com/photo-1526379095098-d400fd0bf935?auto=format&fit=crop&w=1200&q=80',
+    'https://images.unsplash.com/photo-1515879218367-8466d910aaa4?auto=format&fit=crop&w=1200&q=80',
+    'https://images.unsplash.com/photo-1603481546238-487240415921?auto=format&fit=crop&w=1200&q=80',
+    'https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=1200&q=80',
+    'https://images.unsplash.com/photo-1560253023-3ec5d502959f?auto=format&fit=crop&w=1200&q=80',
+    'https://images.unsplash.com/photo-1587202372775-e229f172b9d7?auto=format&fit=crop&w=1200&q=80',
+    'https://images.unsplash.com/photo-1510511459019-5dda7724fd87?auto=format&fit=crop&w=1200&q=80',
+    'https://images.unsplash.com/photo-1527443154391-507e9dc6c5cc?auto=format&fit=crop&w=1200&q=80',
+    'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=1200&q=80',
+    'https://images.unsplash.com/photo-1520607162513-77705c0f0d4a?auto=format&fit=crop&w=1200&q=80'
+  ],
+
+  globalUsedImages: new Set(),
+  globalUsedItems: new Set(),
+  homePayloadPromise: null,
+  monthPayloadPromise: null,
+
+  resolveApiUrl(url = '') {
+    if (window.TechNetGameRuntime?.withApiBase) {
+      return window.TechNetGameRuntime.withApiBase(url);
+    }
+    return url;
+  },
+
+  async fetchJson(url) {
+    const response = await fetch(this.resolveApiUrl(url), { headers: { Accept: 'application/json' } });
+    if (!response.ok) throw new Error(`Falha ao buscar API: ${response.status}`);
+    return response.json();
+  },
+
+  async getHomePayload() {
+    if (!this.homePayloadPromise) {
+      this.homePayloadPromise = this.fetchJson('/api/news/home').catch((error) => {
+        this.homePayloadPromise = null;
+        throw error;
+      });
+    }
+    return this.homePayloadPromise;
+  },
+
+
+  async getMonthPayload() {
+    if (!this.monthPayloadPromise) {
+      this.monthPayloadPromise = this.fetchJson('/api/news/month?limit=24').catch((error) => {
+        this.monthPayloadPromise = null;
+        throw error;
+      });
+    }
+    return this.monthPayloadPromise;
+  },
+
+  translateToPT(text = '') {
+    if (!text) return '';
+    let output = String(text).trim();
+
+    const replacements = [
+      [/^A Brief Overview of\s+/i, 'Uma visão geral de '],
+      [/^An Introduction to\s+/i, 'Uma introdução a '],
+      [/^Introduction to\s+/i, 'Introdução a '],
+      [/^Designing\s+/i, 'Criando '],
+      [/appeared first on/gi, 'apareceu primeiro em'],
+      [/expert tips and tricks/gi, 'dicas e truques especializadas'],
+      [/the biggest game modes/gi, 'os maiores modos de jogo'],
+      [/brief overview/gi, 'visão geral'],
+      [/overview/gi, 'visão geral'],
+      [/introduction/gi, 'introdução'],
+      [/news/gi, 'notícias'],
+      [/update/gi, 'atualização'],
+      [/updates/gi, 'atualizações'],
+      [/release/gi, 'lançamento'],
+      [/released/gi, 'lançado'],
+      [/launch/gi, 'lançamento'],
+      [/launches/gi, 'lança'],
+      [/new/gi, 'novo'],
+      [/games/gi, 'jogos'],
+      [/game/gi, 'jogo'],
+      [/developer/gi, 'desenvolvedor'],
+      [/developers/gi, 'desenvolvedores'],
+      [/with/gi, 'com'],
+      [/and/gi, 'e'],
+      [/for/gi, 'para'],
+      [/security/gi, 'segurança'],
+      [/hardware/gi, 'hardware'],
+      [/cloud/gi, 'nuvem'],
+      [/the post/gi, 'a publicação'],
+      [/the update/gi, 'a atualização'],
+      [/contains multiple vulnerabilities/gi, 'contém múltiplas vulnerabilidades'],
+      [/could allow an attacker to/gi, 'pode permitir que um invasor'],
+      [/the following versions are affected/gi, 'as seguintes versões foram afetadas'],
+      [/technical details/gi, 'detalhes técnicos'],
+      [/view csaf summary/gi, 'veja o resumo CSAF'],
+      [/view/gi, 'veja'],
+      [/summary/gi, 'resumo']
+    ];
+
+    replacements.forEach(([pattern, value]) => {
+      output = output.replace(pattern, value);
+    });
+
+    return output.replace(/\s{2,}/g, ' ').trim();
+  },
+
+  isValidImage(url = '') {
+    if (!url) return false;
+    const lower = String(url).toLowerCase();
+    const badPatterns = ['avatar', 'default', 'blank', 'placeholder', 'no-image', 'noimage', 'gravatar', 'missing', 'fallback-user', 'us_flag_small', '.mp4', '.webm', '.mov', '.avi', '.m3u8', '.svg'];
+    return !badPatterns.some((pattern) => lower.includes(pattern));
+  },
+
+  normalizeApiItems(payload, defaultSource = 'Fonte aberta') {
+    const rawItems = Array.isArray(payload?.items) ? payload.items : (Array.isArray(payload) ? payload : []);
+    return rawItems.map((item, index) => ({
+      id: item.id || `${item.url || item.link || defaultSource}-${index}`,
+      title: item.title || 'Sem título',
+      url: item.url || item.link || '#',
+      summary: item.summary || item.description || 'Leia a matéria completa na fonte.',
+      source: item.source || defaultSource,
+      sourceSlug: item.sourceSlug || '',
+      category: item.category || 'geral',
+      categoryLabel: item.categoryLabel || item.category || 'Geral',
+      publishedAt: item.publishedAt || item.date || item.pubDate || '',
+      image: this.isValidImage(item.image) ? item.image : (this.isValidImage(item.imageFallback) ? item.imageFallback : ''),
+      imageFallback: this.isValidImage(item.imageFallback) ? item.imageFallback : '',
+      priority: item.priority || 'latest',
+      relevanceScore: item.relevanceScore || 0,
+      sourceQualityScore: item.sourceQualityScore || 0,
+      translationScore: item.translationScore || 0
+    }));
+  },
+
+  formatDate(value) {
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return 'Agora';
+    return parsed.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  },
+
+  normalizeTitle(value = '') {
+    return String(value)
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(the|a|an|of|for|with|and|to|on|in|de|da|do|das|dos|para|com|uma|um|o|a|as|os)/g, '-')
+      .replace(/(update|atualizacao|release|lancamento|launch|news|noticias|official|oficial|trailer|beta|patch|guide|guia|overview|visao-geral|brief|resumo)/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  },
+
+  normalizeImageFingerprint(url = '') {
+    if (!url) return '';
+    try {
+      const parsed = new URL(String(url), window.location.origin);
+      const normalizedPath = parsed.pathname
+        .replace(/\\/g, '/')
+        .replace(/[-_]?\d{2,4}x\d{2,4}(?=\.[a-z0-9]+$)/gi, '')
+        .replace(/[-_](thumb|thumbnail|small|medium|large|preview|og|social)(?=\.[a-z0-9]+$)/gi, '');
+      const filename = normalizedPath.split('/').filter(Boolean).pop() || normalizedPath;
+      return `${parsed.hostname}/${filename}`.toLowerCase();
+    } catch {
+      return String(url).split('?')[0].toLowerCase();
+    }
+  },
+
+  buildTitleFingerprint(item) {
+    return `${item.sourceSlug || item.category || 'geral'}-${this.normalizeTitle(item.title).slice(0, 90)}`;
+  },
+
+  getFallbackForGrid(seed = '') {
+    const chars = Array.from(String(seed));
+    const start = Math.abs(chars.reduce((acc, char) => acc + char.charCodeAt(0), 0)) % this.fallbackPool.length;
+
+    for (let i = 0; i < this.fallbackPool.length; i += 1) {
+      const candidate = this.fallbackPool[(start + i) % this.fallbackPool.length];
+      const fingerprint = this.normalizeImageFingerprint(candidate);
+      if (!this.globalUsedImages.has(fingerprint)) {
+        this.globalUsedImages.add(fingerprint);
+        return candidate;
+      }
+    }
+
+    return this.fallbackPool[start];
+  },
+
+  pickUniqueImageForGrid(item) {
+    const candidates = [item.image, item.imageFallback].filter(Boolean);
+
+    for (const candidate of candidates) {
+      const fingerprint = this.normalizeImageFingerprint(candidate);
+      if (!fingerprint) continue;
+      if (this.globalUsedImages.has(fingerprint)) continue;
+      this.globalUsedImages.add(fingerprint);
+      return candidate;
+    }
+
+    return this.getFallbackForGrid(item.title || item.id || 'fallback');
+  },
+
+  decorateItems(items = [], localUsedItems = new Set()) {
+    const output = [];
+    for (const item of items) {
+      const urlKey = (item.url || '').toLowerCase().trim().replace(/\?.*$/, '');
+      const titleFingerprint = this.buildTitleFingerprint(item);
+      if (urlKey && (localUsedItems.has(urlKey) || this.globalUsedItems.has(urlKey))) continue;
+      if (titleFingerprint && (localUsedItems.has(titleFingerprint) || this.globalUsedItems.has(titleFingerprint))) continue;
+      if (urlKey) {
+        localUsedItems.add(urlKey);
+        this.globalUsedItems.add(urlKey);
+      }
+      if (titleFingerprint) {
+        localUsedItems.add(titleFingerprint);
+        this.globalUsedItems.add(titleFingerprint);
+      }
+      output.push({ ...item, image: this.pickUniqueImageForGrid(item) });
+    }
+    return output;
+  },
+
+  buildImgTag(item, className = '') {
+    const fallback = item.imageFallback || this.getFallbackForGrid(item.title || item.id || 'fallback');
+    const safeAlt = String(item.title || 'Imagem da notícia').replace(/"/g, '&quot;');
+    return `<img class="${className}" src="${item.image}" alt="${safeAlt}" loading="lazy" onerror="if(this.dataset.fallbackApplied==='1'){this.remove();return;}this.dataset.fallbackApplied='1';this.src='${fallback}'">`;
+  },
+
+  renderNewsCard(item) {
+    return `
+      <article class="news-card-unified">
+        <a class="news-card-media-unified" href="${item.url}" target="_blank" rel="noopener">
+          ${this.buildImgTag(item)}
+        </a>
+        <div class="news-card-body-unified">
+          <div class="news-card-chip-row"><span class="news-card-chip">${item.source || 'Fonte aberta'}</span><span class="news-card-chip">${item.priority === 'hero' ? 'Destaque' : item.priority === 'highlight' ? 'Em alta' : item.categoryLabel || item.category || 'Geral'}</span>${item.sourceQualityScore >= 90 ? '<span class="news-card-chip">Fonte forte</span>' : ''}</div>
+          <h3><a href="${item.url}" target="_blank" rel="noopener">${item.title}</a></h3>
+          <p>${item.summary || 'Leia a cobertura completa na fonte.'}</p>
+          <div class="news-card-meta-unified">
+            <span>${String(item.categoryLabel || item.category || 'geral')}</span>
+            <span>${this.formatDate(item.publishedAt)}</span>
+          </div>
+        </div>
+      </article>
+    `;
+  },
+
+  resolveBlockContainer(target) {
+    if (!target) return null;
+    return target.closest('[data-feed-block]')
+      || target.closest('.section-block')
+      || target.closest('section')
+      || target.parentElement
+      || null;
+  },
+
+  hideEmptyContainer(target) {
+    const container = this.resolveBlockContainer(target);
+    if (!container) return;
+
+    container.classList.add('feed-block-collapsing');
+
+    window.setTimeout(() => {
+      container.hidden = true;
+      container.classList.remove('feed-block-collapsing');
+    }, 260);
+  },
+
+  showContainer(target) {
+    const container = this.resolveBlockContainer(target);
+    if (!container) return;
+    container.hidden = false;
+    container.classList.remove('feed-block-collapsing');
+  },
+
+  renderNewsGrid(target, items = [], limit = 12) {
+    if (!target) return false;
+    const localUsedItems = new Set();
+    const decorated = this.decorateItems(items, localUsedItems).slice(0, limit);
+
+    if (!decorated.length) {
+      target.innerHTML = '';
+      this.hideEmptyContainer(target);
+      return false;
+    }
+
+    target.innerHTML = decorated.map((item) => this.renderNewsCard(item)).join('');
+    this.showContainer(target);
+    return true;
+  },
+
+  renderFeaturedSmart(container, item) {
+    if (!container || !item) return;
+    container.innerHTML = `
+      <article class="featured-smart-card">
+        <a class="featured-smart-media" href="${item.url}" target="_blank" rel="noopener">
+          ${this.buildImgTag(item, 'featured-smart-image')}
+        </a>
+        <div class="featured-smart-body">
+          <span class="featured-smart-badge">${item.priority === 'hero' ? 'Destaque principal' : (item.source || 'Destaque')}</span>
+          <h3><a href="${item.url}" target="_blank" rel="noopener">${item.title}</a></h3>
+          <p>${item.summary || 'Leia a matéria completa na fonte.'}</p>
+          <div class="featured-smart-meta">
+            <span>${String(item.categoryLabel || item.category || 'geral')}</span>
+            <span>${this.formatDate(item.publishedAt)}</span>
+          </div>
+        </div>
+      </article>
+    `;
+  },
+
+  async hydrateFeaturedSmart() {
+    const container = document.querySelector('[data-featured-smart]');
+    if (!container) return;
+
+    try {
+      const payload = await this.getHomePayload();
+      const hero = payload?.hero ? this.normalizeApiItems({ items: [payload.hero] }, 'Destaque')[0] : null;
+      if (!hero) throw new Error('hero-missing');
+      this.renderFeaturedSmart(container, { ...hero, image: this.pickUniqueImageForGrid(hero) });
+    } catch (error) {
+      container.innerHTML = '<div class="featured-smart-status">Não foi possível carregar o destaque agora.</div>';
+      console.error('TechNetGame destaque:', error);
+    }
+  },
+
+
+  async hydrateMonthFeatured() {
+    const container = document.querySelector('[data-month-featured]');
+    if (!container) return;
+
+    try {
+      const payload = await this.getMonthPayload();
+      const hero = payload?.hero ? this.normalizeApiItems({ items: [payload.hero] }, 'Mês')[0] : null;
+      if (!hero) throw new Error('month-hero-missing');
+      this.renderFeaturedSmart(container, {
+        ...hero,
+        image: this.pickUniqueImageForGrid(hero),
+        priority: 'hero',
+        categoryLabel: 'Mês'
+      });
+      const badge = container.querySelector('.featured-smart-badge');
+      if (badge) badge.textContent = 'Melhor do mês';
+    } catch (error) {
+      container.innerHTML = '<div class="featured-smart-status">Não foi possível carregar o destaque do mês agora.</div>';
+      console.error('TechNetGame mês:', error);
+    }
+  },
+
+  resolveHomeItemsFromPayload(payload, api) {
+    if (!payload) return [];
+    const normalizedApi = String(api || '').toLowerCase();
+
+    if (normalizedApi.includes('/api/news/latest')) {
+      return this.normalizeApiItems({ items: payload.latest || [] }, 'Últimas notícias');
+    }
+    if (normalizedApi.includes('/api/news/category/technology')) {
+      return this.normalizeApiItems({ items: payload.categories?.technology || [] }, 'Tecnologia');
+    }
+    if (normalizedApi.includes('/api/news/category/games')) {
+      return this.normalizeApiItems({ items: payload.categories?.games || [] }, 'Games');
+    }
+    if (normalizedApi.includes('/api/news/category/hardware')) {
+      return this.normalizeApiItems({ items: payload.categories?.hardware || [] }, 'Hardware');
+    }
+    if (normalizedApi.includes('/api/news/category/security')) {
+      return this.normalizeApiItems({ items: payload.categories?.security || [] }, 'Segurança');
+    }
+    if (normalizedApi.includes('/api/news/category/ai')) {
+      return this.normalizeApiItems({ items: payload.categories?.ai || [] }, 'IA & Dados');
+    }
+
+    return [];
+  },
+
+  async hydrateHomePage() {
+    try {
+      const payload = await this.getHomePayload();
+      const grids = Array.from(document.querySelectorAll('[data-news-grid]'));
+
+      for (const grid of grids) {
+        const api = grid.dataset.api || '';
+        const limit = parseInt(grid.dataset.limit || '12', 10);
+        const status = grid.parentElement?.querySelector('[data-grid-status]');
+        let items = this.resolveHomeItemsFromPayload(payload, api);
+
+        if (!items.length) {
+          try {
+            const fallbackPayload = await this.fetchJson(api);
+            items = this.normalizeApiItems(fallbackPayload, grid.dataset.label || 'Fonte aberta');
+          } catch (fallbackError) {
+            console.error('TechNetGame home fallback:', fallbackError);
+          }
+        }
+
+        const hasItems = this.renderNewsGrid(grid, items, limit);
+        if (status) status.textContent = hasItems ? `Atualizado em ${this.formatDate(payload.generatedAt || new Date().toISOString())}` : '';
+      }
+    } catch (error) {
+      console.error('TechNetGame home:', error);
+      const grids = Array.from(document.querySelectorAll('[data-news-grid]'));
+      for (const grid of grids) {
+        await this.hydrateGrid(grid);
+      }
+    }
+  },
+
+  async hydrateGrid(target) {
+    const api = target.dataset.api;
+    const limit = parseInt(target.dataset.limit || '12', 10);
+    const source = target.dataset.label || 'Fonte aberta';
+    const status = target.parentElement?.querySelector('[data-grid-status]');
+    if (!api) return;
+    if (status) status.textContent = 'Carregando...';
+
+    try {
+      const payload = await this.fetchJson(api);
+      const items = this.normalizeApiItems(payload, source);
+      const hasItems = this.renderNewsGrid(target, items, limit);
+      if (status) status.textContent = hasItems ? `Atualizado em ${this.formatDate(payload.generatedAt || new Date().toISOString())}` : '';
+    } catch (error) {
+      target.innerHTML = '';
+      this.hideEmptyContainer(target);
+      if (status) status.textContent = '';
+      console.error('TechNetGame grid:', error);
+    }
+  },
+
+  async renderFeedBlock(block) {
+    const grid = block.querySelector('[data-feed-list]');
+    const status = block.querySelector('[data-feed-status]');
+    const sourceName = block.dataset.feedLabel || 'Fonte aberta';
+    const apiUrl = block.dataset.feedApi || '';
+    const limit = parseInt(block.dataset.feedLimit || '6', 10);
+    if (!grid) return;
+    grid.classList.add('news-wall-grid');
+    if (status) status.textContent = 'Carregando...';
+
+    try {
+      const payload = await this.fetchJson(apiUrl);
+      const items = this.normalizeApiItems(payload, sourceName);
+      const hasItems = this.renderNewsGrid(grid, items, limit);
+      if (status) status.textContent = hasItems ? `Atualizado em ${this.formatDate(payload.generatedAt || new Date().toISOString())}` : '';
+    } catch (error) {
+      grid.innerHTML = '';
+      this.hideEmptyContainer(grid);
+      if (status) status.textContent = '';
+      console.error('TechNetGame bloco:', error);
+    }
+  },
+
+  isHomePage() {
+    const pathname = (window.location.pathname || '/').toLowerCase();
+    return pathname === '/' || pathname.endsWith('/index.html');
+  },
+
+  async init() {
+    this.globalUsedImages.clear();
+    this.globalUsedItems.clear();
+
+    await this.hydrateFeaturedSmart();
+    await this.hydrateMonthFeatured();
+
+    if (this.isHomePage()) {
+      await this.hydrateHomePage();
+    } else {
+      const grids = document.querySelectorAll('[data-news-grid]');
+      for (const grid of grids) {
+        await this.hydrateGrid(grid);
+      }
+    }
+
+    const blocks = document.querySelectorAll('[data-feed-block]');
+    for (const block of blocks) {
+      await this.renderFeedBlock(block);
+    }
+  }
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+  window.TechNetGameFeeds?.init();
+});

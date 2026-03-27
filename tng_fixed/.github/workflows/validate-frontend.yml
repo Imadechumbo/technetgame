@@ -1,0 +1,27 @@
+name: Validate Frontend Cloudflare Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'site/**'
+      - '.github/workflows/validate-frontend.yml'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate required files
+        run: |
+          test -f site/index.html
+          test -f site/assets/js/runtime-config.js
+          test -f site/assets/css/styles.css
+
+      - name: Check placeholder config
+        run: |
+          grep -q "SEU-BACKEND.onrender.com" site/assets/js/runtime-config.js || true
+          echo "Frontend validado."

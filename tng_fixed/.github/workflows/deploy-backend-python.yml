@@ -1,0 +1,60 @@
+name: Deploy Railway Python
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend-python/**'
+      - '.github/workflows/deploy-backend-python.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    if: ${{ !contains(github.event.head_commit.message, 'rollback automático') }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          cd backend-python
+          pip install -r requirements.txt
+
+      - name: Start local python service
+        run: |
+          cd backend-python
+          cp .env.example .env
+          nohup python app.py > python.log 2>&1 &
+          sleep 10
+
+      - name: Health check local
+        run: curl -f http://localhost:5000/health
+
+      - name: Trigger Railway deploy
+        run: curl -X POST "${{ secrets.RAILWAY_DEPLOY_HOOK }}"
+
+      - name: Wait Railway deploy
+        run: sleep 45
+
+      - name: Health check production
+        run: curl -f "${{ secrets.RAILWAY_HEALTH_URL }}"
+
+      - name: Auto rollback
+        if: failure()
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "actions@github.com"
+          git revert HEAD --no-edit
+          git commit --amend -m "rollback automático backend python railway"
+          git push

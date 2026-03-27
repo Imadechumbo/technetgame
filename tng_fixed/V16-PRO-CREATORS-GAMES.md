@@ -1,0 +1,1 @@
+V16: correção do menu mobile, hub de creators BR com HadesPlays, vídeo do dia em rotação, destaques fixos de jogos aguardados e integração com o feed de Jogos.

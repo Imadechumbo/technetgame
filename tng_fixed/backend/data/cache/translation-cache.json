@@ -1,0 +1,23 @@
+{
+  "generatedAt": "2026-03-18T03:32:18.137Z",
+  "items": {
+    "6fc133058e660fb45f859ad54456eafbe70a249e": {
+      "sourceText": "Steam client update available now",
+      "translatedText": "Steam client atualização já disponível",
+      "provider": "heuristic",
+      "createdAt": "2026-03-18T03:32:18.130Z"
+    },
+    "9cc67b7b56d80ebc49add7c6fa4600d8dd2cfa2b": {
+      "sourceText": "Read more at Steam News",
+      "translatedText": "leia mais em Steam News",
+      "provider": "heuristic",
+      "createdAt": "2026-03-18T03:32:18.135Z"
+    }
+  },
+  "meta": {
+    "cacheHits": 0,
+    "apiTranslations": 0,
+    "fallbackTranslations": 2,
+    "failedApiCalls": 2
+  }
+}

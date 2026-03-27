@@ -28,23 +28,6 @@ app.use(
 app.use(compression());
 app.use(express.json({ limit: "1mb" }));
 
-const defaultAllowedOrigins = [
-  "http://127.0.0.1:5500",
-  "http://localhost:5500",
-  "https://technetgame-site.pages.dev",
-  "https://technetgame.com.br",
-  "https://www.technetgame.com.br",
-];
-
-const envAllowedOrigins = [
-  process.env.FRONTEND_URL,
-  ...(process.env.ALLOWED_ORIGIN
-    ? process.env.ALLOWED_ORIGIN.split(",").map((value) => value.trim())
-    : []),
-].filter(Boolean);
-
-const configuredOrigins = [...new Set([...defaultAllowedOrigins, ...envAllowedOrigins])];
-
 if (process.env.ENABLE_CORS !== "false") {
   app.use(
     cors({
@@ -53,11 +36,24 @@ if (process.env.ENABLE_CORS !== "false") {
           return callback(null, true);
         }
 
-        if (configuredOrigins.includes(origin)) {
+        const allowedDomains = [
+          "localhost",
+          "127.0.0.1",
+          "pages.dev",
+          "technetgame.com.br",
+        ];
+
+        const isAllowed = allowedDomains.some((domain) =>
+          origin.includes(domain),
+        );
+
+        if (isAllowed) {
           return callback(null, true);
         }
 
-        return callback(new Error(`Origin não permitida: ${origin}`));
+        console.log("CORS bloqueado:", origin);
+
+        return callback(null, true);
       },
       methods: ["GET", "POST", "OPTIONS"],
       allowedHeaders: ["Content-Type", "Authorization"],

@@ -1,7 +1,6 @@
 import express from "express";
 import helmet from "helmet";
 import compression from "compression";
-import cors from "cors";
 import rateLimit from "express-rate-limit";
 
 import healthRoutes from "./routes/healthRoutes.js";
@@ -13,16 +12,13 @@ import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
 
 const app = express();
 
-// segurança básica
 app.disable("x-powered-by");
 app.set("etag", "strong");
 
-// proxy (Railway / Cloudflare)
 if (process.env.TRUST_PROXY === "true") {
   app.set("trust proxy", 1);
 }
 
-// middlewares
 app.use(
   helmet({
     crossOriginEmbedderPolicy: false,
@@ -33,11 +29,18 @@ app.use(
 app.use(compression());
 app.use(express.json({ limit: "1mb" }));
 
-// 🔥 CORS LIBERADO (resolve Cloudflare Pages)
-app.use(cors());
-app.options("*", cors());
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
 
-// rate limit
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(200);
+  }
+
+  next();
+});
+
 app.use(
   rateLimit({
     windowMs: 60 * 1000,
@@ -47,7 +50,6 @@ app.use(
   })
 );
 
-// rota base
 app.get("/", (_req, res) => {
   res.json({
     ok: true,
@@ -56,13 +58,11 @@ app.get("/", (_req, res) => {
   });
 });
 
-// rotas
 app.use("/api", healthRoutes);
 app.use("/api", metaRoutes);
 app.use("/api", mediaRoutes);
 app.use("/api", newsRoutes);
 
-// erros
 app.use(notFoundHandler);
 app.use(errorHandler);
 

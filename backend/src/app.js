@@ -1,7 +1,6 @@
 import express from "express";
 import helmet from "helmet";
 import compression from "compression";
-import cors from "cors";
 
 import healthRoutes from "./routes/healthRoutes.js";
 import newsRoutes from "./routes/newsRoutes.js";
@@ -23,25 +22,25 @@ const allowedOrigins = new Set([
   "https://technetgame-site.pages.dev",
 ]);
 
-const corsOptions = {
-  origin(origin, callback) {
-    if (!origin) return callback(null, true);
+/* CORS GLOBAL FORÇADO */
+app.use((req, res, next) => {
+  const origin = String(req.headers.origin || "").trim();
 
-    const normalizedOrigin = String(origin).trim();
+  if (origin && allowedOrigins.has(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Vary", "Origin");
+  }
 
-    if (allowedOrigins.has(normalizedOrigin)) {
-      return callback(null, true);
-    }
+  res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Refresh-Token");
+  res.setHeader("Access-Control-Max-Age", "86400");
 
-    console.log("[CORS] bloqueado:", normalizedOrigin);
-    return callback(new Error("Not allowed by CORS"));
-  },
-  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "X-Refresh-Token"],
-  credentials: false,
-  optionsSuccessStatus: 204,
-  maxAge: 86400,
-};
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(204);
+  }
+
+  return next();
+});
 
 app.use(helmet({
   crossOriginEmbedderPolicy: false,
@@ -50,9 +49,6 @@ app.use(helmet({
 }));
 
 app.use(compression());
-
-app.use(cors(corsOptions));
-app.options("*", cors(corsOptions));
 
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: true }));

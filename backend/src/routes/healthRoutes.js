@@ -4,7 +4,11 @@ import { getCachePaths } from '../services/cacheService.js';
 
 const router = Router();
 
-router.get('/health', async (req, res, next) => {
+/**
+ * ✅ ROTA FINAL: /api/health
+ * (porque app.js usa: app.use("/api/health", healthRoutes))
+ */
+router.get('/', async (req, res, next) => {
   try {
     const cache = await getCache();
     const items = Array.isArray(cache?.items) ? cache.items : [];
@@ -23,11 +27,16 @@ router.get('/health', async (req, res, next) => {
         ? Math.max(0, Math.round((Date.now() - new Date(generatedAt).getTime()) / 1000))
         : null,
       totalItems: items.length,
+
       categories: Object.fromEntries(
         Object.entries(categories)
           .filter(([key]) => key !== 'latest')
-          .map(([key, payload]) => [key, Array.isArray(payload?.items) ? payload.items.length : 0])
+          .map(([key, payload]) => [
+            key,
+            Array.isArray(payload?.items) ? payload.items.length : 0
+          ])
       ),
+
       translation: {
         cacheHits: translation.cacheHits || 0,
         apiTranslations: translation.apiTranslations || 0,
@@ -37,7 +46,9 @@ router.get('/health', async (req, res, next) => {
         provider: translation.provider || 'unknown',
         avgTranslationScore: cache?.meta?.metrics?.avgTranslationScore || 0
       },
+
       refresh: getRefreshStatus(),
+
       cache: {
         status: cache?.meta?.status || 'unknown',
         duplicateGroups: cache?.meta?.duplicateGroups || 0,
@@ -45,6 +56,7 @@ router.get('/health', async (req, res, next) => {
         paths: getCachePaths()
       }
     });
+
   } catch (error) {
     next(error);
   }

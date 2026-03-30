@@ -24,20 +24,8 @@ window.TechNetGameFeeds = {
     monthPayloadPromise: null,
 
     getApiCandidates() {
-        const cfg = window.RUNTIME_CONFIG || {};
-        const primary =
-            cfg.API_BASE_URL ||
-            cfg.API_URL ||
-            cfg.API_BASE ||
-            window.__TNG_API_BASE__ ||
-            '';
-
-        const fallbacks = Array.isArray(cfg.API_FALLBACKS) ? cfg.API_FALLBACKS : [];
-
-        return [primary, ...fallbacks]
-            .map((value) => String(value || '').trim().replace(/\/$/, ''))
-            .filter(Boolean)
-            .filter((value, index, arr) => arr.indexOf(value) === index);
+        const primary = window.TNG_CONFIG?.API_BASE_URL || 'https://api.technetgame.com.br';
+        return [primary].filter(Boolean);
     },
 
     getApiBase() {
@@ -67,10 +55,8 @@ window.TechNetGameFeeds = {
 
                 const response = await fetch(finalUrl, {
                     headers: {
-                        Accept: 'application/json',
-                        'Cache-Control': 'no-cache'
-                    },
-                    cache: 'no-store'
+                        Accept: 'application/json'
+                    }
                 });
 
                 if (!response.ok) {
@@ -88,61 +74,24 @@ window.TechNetGameFeeds = {
     },
 
     async fetchHomePayloadFallback() {
-        const [
-            latestResult,
-            techResult,
-            gamesResult,
-            hardwareResult,
-            securityResult,
-            aiResult
-        ] = await Promise.allSettled([
-            this.fetchJson('/api/news/latest?limit=18'),
-            this.fetchJson('/api/news/category/technology?limit=18'),
-            this.fetchJson('/api/news/category/games?limit=18'),
-            this.fetchJson('/api/news/category/hardware?limit=18'),
-            this.fetchJson('/api/news/category/security?limit=18'),
-            this.fetchJson('/api/news/category/ai?limit=18')
+        const [latestResult] = await Promise.allSettled([
+            this.fetchJson('/api/news/latest?limit=18')
         ]);
 
         const latestPayload = latestResult.status === 'fulfilled' ? latestResult.value : { items: [] };
-        const techPayload = techResult.status === 'fulfilled' ? techResult.value : { items: [] };
-        const gamesPayload = gamesResult.status === 'fulfilled' ? gamesResult.value : { items: [] };
-        const hardwarePayload = hardwareResult.status === 'fulfilled' ? hardwareResult.value : { items: [] };
-        const securityPayload = securityResult.status === 'fulfilled' ? securityResult.value : { items: [] };
-        const aiPayload = aiResult.status === 'fulfilled' ? aiResult.value : { items: [] };
-
         const latestItems = this.normalizeApiItems(latestPayload, 'Últimas notícias');
-        const techItems = this.normalizeApiItems(techPayload, 'Tecnologia');
-        const gamesItems = this.normalizeApiItems(gamesPayload, 'Games');
-        const hardwareItems = this.normalizeApiItems(hardwarePayload, 'Hardware');
-        const securityItems = this.normalizeApiItems(securityPayload, 'Segurança');
-        const aiItems = this.normalizeApiItems(aiPayload, 'IA');
 
         return {
-            hero:
-                latestItems[0] ||
-                techItems[0] ||
-                gamesItems[0] ||
-                hardwareItems[0] ||
-                securityItems[0] ||
-                aiItems[0] ||
-                null,
+            hero: latestItems[0] || null,
             latest: latestItems,
             categories: {
-                technology: techItems,
-                games: gamesItems,
-                hardware: hardwareItems,
-                security: securityItems,
-                ai: aiItems
+                technology: [],
+                games: [],
+                hardware: [],
+                security: [],
+                ai: []
             },
-            generatedAt:
-                latestPayload?.generatedAt ||
-                techPayload?.generatedAt ||
-                gamesPayload?.generatedAt ||
-                hardwarePayload?.generatedAt ||
-                securityPayload?.generatedAt ||
-                aiPayload?.generatedAt ||
-                new Date().toISOString()
+            generatedAt: latestPayload?.generatedAt || new Date().toISOString()
         };
     },
 
@@ -648,9 +597,6 @@ window.TechNetGameFeeds = {
     }
 };
 
-document.addEventListener('DOMContentLoaded', async () => {
-    try {
-        await (window.__TNG_CONFIG_READY__ || Promise.resolve());
-    } catch { }
+document.addEventListener('DOMContentLoaded', () => {
     window.TechNetGameFeeds?.init();
 });

@@ -1,10 +1,15 @@
 export function notFoundHandler(req, res) {
-  res.status(404).json({ error: 'Rota não encontrada' });
+  res.status(404).json({
+    ok: false,
+    error: "Rota não encontrada"
+  });
 }
 
-export function errorHandler(error, req, res, next) {
-  console.error(error);
-  res.status(error.status || 500).json({
-    error: error.message || 'Erro interno do servidor'
+export function errorHandler(err, req, res, next) {
+  console.error("[ERROR]", err);
+
+  res.status(err.status || 500).json({
+    ok: false,
+    error: err.message || "Internal Server Error"
   });
 }

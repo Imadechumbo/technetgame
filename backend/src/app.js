@@ -17,34 +17,54 @@ app.disable("x-powered-by");
 app.set("etag", "strong");
 app.set("trust proxy", 1);
 
-const allowedOrigins = [
+const allowedOrigins = new Set([
   "https://technetgame.com.br",
   "https://www.technetgame.com.br",
-  "https://technetgame-site.pages.dev"
-];
+  "https://technetgame-site.pages.dev",
+]);
+
+/**
+ * CORS FORÇADO:
+ * garante headers também em respostas de erro / fallback / rotas problemáticas.
+ */
+app.use((req, res, next) => {
+  const origin = String(req.headers.origin || "").trim();
+
+  if (origin && allowedOrigins.has(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Vary", "Origin");
+  }
+
+  res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Refresh-Token");
+  res.setHeader("Access-Control-Max-Age", "86400");
+
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(204);
+  }
+
+  return next();
+});
 
 const corsOptions = {
   origin(origin, callback) {
     if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-    return callback(new Error("CORS bloqueado: " + origin));
+    if (allowedOrigins.has(origin)) return callback(null, true);
+    return callback(null, false);
   },
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization", "X-Refresh-Token"],
-  credentials: false
+  credentials: false,
 };
 
 app.use(helmet({
   crossOriginEmbedderPolicy: false,
   contentSecurityPolicy: false,
-  crossOriginResourcePolicy: false
+  crossOriginResourcePolicy: false,
 }));
 
 app.use(compression());
 app.use(cors(corsOptions));
-app.options("*", cors(corsOptions));
 
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: true }));

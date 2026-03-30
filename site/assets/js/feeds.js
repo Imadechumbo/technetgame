@@ -148,8 +148,7 @@ window.TechNetGameFeeds = {
 
     async getHomePayload() {
         if (!this.homePayloadPromise) {
-            this.homePayloadPromise = this.fetchJson('/api/news/home')
-                .catch(() => this.fetchHomePayloadFallback())
+            this.homePayloadPromise = this.fetchHomePayloadFallback()
                 .catch((error) => {
                     this.homePayloadPromise = null;
                     throw error;

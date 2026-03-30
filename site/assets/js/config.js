@@ -1,7 +1,6 @@
 (function () {
   const FALLBACKS = [
-    'https://api.technetgame.com.br',
-    'https://technetgame-backend-production.up.railway.app'
+    'https://api.technetgame.com.br'
   ];
 
   function normalizeBase(value = '') {
@@ -14,16 +13,13 @@
 
   function getCandidates() {
     const runtime = window.RUNTIME_CONFIG || {};
-    const origin = normalizeBase(window.location?.origin || '');
     const host = String(window.location?.hostname || '').toLowerCase();
     const isLocal = /localhost|127\.0\.0\.1/i.test(host);
-    const sameOriginApi = origin && !/pages\.dev$/i.test(host) ? origin : '';
 
     return unique([
       runtime.API_URL,
       runtime.API_BASE,
       ...(Array.isArray(runtime.API_FALLBACKS) ? runtime.API_FALLBACKS : []),
-      sameOriginApi,
       ...FALLBACKS,
       isLocal ? 'http://127.0.0.1:8080' : ''
     ]);

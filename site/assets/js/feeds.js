@@ -88,14 +88,28 @@ window.TechNetGameFeeds = {
     },
 
     async fetchHomePayloadFallback() {
-        const [latestPayload, techPayload, gamesPayload, hardwarePayload, securityPayload, aiPayload] = await Promise.all([
+        const [
+            latestResult,
+            techResult,
+            gamesResult,
+            hardwareResult,
+            securityResult,
+            aiResult
+        ] = await Promise.allSettled([
             this.fetchJson('/api/news/latest?limit=18'),
             this.fetchJson('/api/news/category/technology?limit=18'),
             this.fetchJson('/api/news/category/games?limit=18'),
             this.fetchJson('/api/news/category/hardware?limit=18'),
             this.fetchJson('/api/news/category/security?limit=18'),
-            this.fetchJson('/api/news/category/ai?limit=18').catch(() => ({ items: [] }))
+            this.fetchJson('/api/news/category/ai?limit=18')
         ]);
+
+        const latestPayload = latestResult.status === 'fulfilled' ? latestResult.value : { items: [] };
+        const techPayload = techResult.status === 'fulfilled' ? techResult.value : { items: [] };
+        const gamesPayload = gamesResult.status === 'fulfilled' ? gamesResult.value : { items: [] };
+        const hardwarePayload = hardwareResult.status === 'fulfilled' ? hardwareResult.value : { items: [] };
+        const securityPayload = securityResult.status === 'fulfilled' ? securityResult.value : { items: [] };
+        const aiPayload = aiResult.status === 'fulfilled' ? aiResult.value : { items: [] };
 
         const latestItems = this.normalizeApiItems(latestPayload, 'Últimas notícias');
         const techItems = this.normalizeApiItems(techPayload, 'Tecnologia');
@@ -105,7 +119,14 @@ window.TechNetGameFeeds = {
         const aiItems = this.normalizeApiItems(aiPayload, 'IA');
 
         return {
-            hero: latestItems[0] || techItems[0] || gamesItems[0] || hardwareItems[0] || securityItems[0] || aiItems[0] || null,
+            hero:
+                latestItems[0] ||
+                techItems[0] ||
+                gamesItems[0] ||
+                hardwareItems[0] ||
+                securityItems[0] ||
+                aiItems[0] ||
+                null,
             latest: latestItems,
             categories: {
                 technology: techItems,
@@ -114,16 +135,25 @@ window.TechNetGameFeeds = {
                 security: securityItems,
                 ai: aiItems
             },
-            generatedAt: latestPayload?.generatedAt || techPayload?.generatedAt || new Date().toISOString()
+            generatedAt:
+                latestPayload?.generatedAt ||
+                techPayload?.generatedAt ||
+                gamesPayload?.generatedAt ||
+                hardwarePayload?.generatedAt ||
+                securityPayload?.generatedAt ||
+                aiPayload?.generatedAt ||
+                new Date().toISOString()
         };
     },
 
     async getHomePayload() {
         if (!this.homePayloadPromise) {
-            this.homePayloadPromise = this.fetchHomePayloadFallback().catch((error) => {
-                this.homePayloadPromise = null;
-                throw error;
-            });
+            this.homePayloadPromise = this.fetchJson('/api/news/home')
+                .catch(() => this.fetchHomePayloadFallback())
+                .catch((error) => {
+                    this.homePayloadPromise = null;
+                    throw error;
+                });
         }
         return this.homePayloadPromise;
     },

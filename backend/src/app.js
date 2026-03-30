@@ -12,17 +12,18 @@ import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
 
 const app = express();
 
+/* ========================= CONFIG ========================= */
 app.disable("x-powered-by");
 app.set("etag", "strong");
 app.set("trust proxy", 1);
 
+/* ========================= CORS GLOBAL FORÇADO ========================= */
 const allowedOrigins = new Set([
   "https://technetgame.com.br",
   "https://www.technetgame.com.br",
   "https://technetgame-site.pages.dev",
 ]);
 
-/* CORS GLOBAL FORÇADO */
 app.use((req, res, next) => {
   const origin = String(req.headers.origin || "").trim();
 
@@ -42,6 +43,7 @@ app.use((req, res, next) => {
   return next();
 });
 
+/* ========================= MIDDLEWARES ========================= */
 app.use(helmet({
   crossOriginEmbedderPolicy: false,
   contentSecurityPolicy: false,
@@ -53,12 +55,14 @@ app.use(compression());
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: true }));
 
+/* ========================= ROTAS ========================= */
 app.use("/api/health", healthRoutes);
 app.use("/api/news", newsRoutes);
 app.use("/api/meta", metaRoutes);
 app.use("/api/media", mediaRoutes);
 app.use("/api/hardware", hardwareRoutes);
 
+/* ========================= ERROS ========================= */
 app.use(notFoundHandler);
 app.use(errorHandler);
 

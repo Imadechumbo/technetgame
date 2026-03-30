@@ -32,27 +32,27 @@ function requireRefreshAuth(req, res, next) {
   return next();
 }
 
-router.get('/news/latest', async (req, res) => {
+router.get('/latest', async (req, res) => {
   const limit = safeLimit(req.query.limit, 12);
   const data = await getLatest(limit);
   res.set('Cache-Control', 'public, max-age=300, s-maxage=300, stale-while-revalidate=120');
   res.json(data);
 });
 
-router.get('/news/featured', async (req, res) => {
+router.get('/featured', async (req, res) => {
   const data = await getFeatured();
   res.set('Cache-Control', 'public, max-age=300, s-maxage=300, stale-while-revalidate=120');
   res.json(data);
 });
 
-router.get('/news/home', async (req, res) => {
+router.get('/home', async (req, res) => {
   const data = await getHomePayload();
   res.set('Cache-Control', 'public, max-age=300, s-maxage=300, stale-while-revalidate=60');
   res.json(data);
 });
 
 
-router.get('/news/month', async (req, res) => {
+router.get('/month', async (req, res) => {
   const limit = safeLimit(req.query.limit, 24);
   const days = Math.min(Math.max(Number(req.query.days) || 30, 7), 90);
   const data = await getMonthRoundup(limit, days);
@@ -60,13 +60,13 @@ router.get('/news/month', async (req, res) => {
   res.json(data);
 });
 
-router.get('/news/status', async (req, res) => {
+router.get('/status', async (req, res) => {
   res.set('Cache-Control', 'no-store');
   res.json({ ok: true, refresh: getRefreshStatus() });
 });
 
 
-router.get('/news/game-search', async (req, res, next) => {
+router.get('/game-search', async (req, res, next) => {
   try {
     const q = String(req.query.q || '').trim();
     const limit = safeLimit(req.query.limit, 3);
@@ -80,21 +80,21 @@ router.get('/news/game-search', async (req, res, next) => {
 });
 
 
-router.get('/news/category/:slug', async (req, res) => {
+router.get('/category/:slug', async (req, res) => {
   const limit = safeLimit(req.query.limit, 12);
   const data = await getByCategory(req.params.slug, limit);
   res.set('Cache-Control', 'public, max-age=300, s-maxage=300, stale-while-revalidate=120');
   res.json(data);
 });
 
-router.get('/news/source/:slug', async (req, res) => {
+router.get('/source/:slug', async (req, res) => {
   const limit = safeLimit(req.query.limit, 12);
   const data = await getBySource(req.params.slug, limit);
   res.set('Cache-Control', 'public, max-age=300, s-maxage=300, stale-while-revalidate=120');
   res.json(data);
 });
 
-router.post('/news/refresh', requireRefreshAuth, async (req, res) => {
+router.post('/refresh', requireRefreshAuth, async (req, res) => {
   const data = await refreshAllFeeds({ force: true });
   res.json({ ok: true, generatedAt: data.generatedAt, totalItems: data.meta.totalItems, sources: data.meta.sources, meta: data.meta });
 });

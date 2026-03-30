@@ -32,7 +32,7 @@ const corsOptions = {
     return callback(new Error("CORS bloqueado: " + origin));
   },
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Refresh-Token"],
   credentials: false
 };
 
